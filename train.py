@@ -52,6 +52,10 @@ def train(
                                              num_workers=8, pin_memory=True, drop_last=True, collate_fn=collate_fn)
     # Initialize model
     model = Darknet(cfg, dataset.nID)
+    res_model = Resnet(cfg, dataset.nID)
+    _param = res_model.parameters()
+    for pa in _param:
+        print(type(pa), pa.size())
 
     cutoff = -1  # backbone reaches to cutoff layer
     start_epoch = 0

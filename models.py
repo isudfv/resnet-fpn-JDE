@@ -7,12 +7,26 @@ from utils.parse_config import *
 from utils.utils import *
 import time
 import math
+from torchvision import transforms, models
 
 try:
     from utils.syncbn import SyncBN
     batch_norm=SyncBN #nn.BatchNorm2d
 except ImportError:
     batch_norm=nn.BatchNorm2d
+
+def create_resnet_modules(module_defs):
+    """
+    Constructs module list of layer blocks from models.resnet152
+    """
+    hyperparams = module_defs.pop(0)
+    model = models.resnet152(weights='ResNet152_Weights.DEFAULT')
+    features = list(model.children())[:-2]
+    module_list = nn.ModuleList()
+    # resnet_module = nn.Sequential(*features)
+    for module in features:
+        module_list.append(module)
+    return hyperparams, module_list
 
 def create_modules(module_defs):
     """
@@ -279,6 +293,45 @@ class Darknet(nn.Module):
             return sum(output), torch.Tensor(list(self.losses.values())).cuda()
         elif self.test_emb:
             return torch.cat(output, 0)
+        return torch.cat(output, 1)
+
+class Resnet(nn.Module):
+    """Resnet object detection model"""
+
+    def __init__(self, cfg_dict, nID=0, test_emb=False):
+        super(Resnet, self).__init__()
+        if isinstance(cfg_dict, str):
+            cfg_dict = parse_model_cfg(cfg_dict)
+        self.module_defs = cfg_dict
+        self.module_defs[0]['nID'] = nID
+        self.img_size = [int(self.module_defs[0]['width']), int(self.module_defs[0]['height'])]
+        self.emb_dim = int(self.module_defs[0]['embedding_dim'])
+        self.hyperparams, self.module_list = create_resnet_modules(self.module_defs)
+        self.loss_names = ['loss', 'box', 'conf', 'id', 'nT']
+        self.losses = OrderedDict()
+        for ln in self.loss_names:
+            self.losses[ln] = 0
+        self.test_emb = test_emb
+
+        self.classifier = nn.Linear(self.emb_dim, nID) if nID>0 else None
+
+        for module in self.module_list:
+            print(module)
+
+
+
+    def forward(self, x, targets=None, targets_len=None):
+        self.losses = OrderedDict()
+        for ln in self.loss_names:
+            self.losses[ln] = 0
+        is_training = (targets is not None) and (not self.test_emb)
+        #img_size = x.shape[-1]
+        layer_outputs = []
+        output = []
+
+        for module in self.module_list:
+            print(module)
+
         return torch.cat(output, 1)
 
 def shift_tensor_vertically(t, delta):
