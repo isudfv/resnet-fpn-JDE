@@ -73,12 +73,12 @@ def train(
 
     else:
         # Initialize model with backbone (optional)
-        if cfg.endswith('yolov3.cfg'):
-            load_darknet_weights(model, osp.join(weights_from, 'darknet53.conv.74'))
-            cutoff = 75
-        elif cfg.endswith('yolov3-tiny.cfg'):
-            load_darknet_weights(model, osp.join(weights_from, 'yolov3-tiny.conv.15'))
-            cutoff = 15
+        # if cfg.endswith('yolov3.cfg'):
+        load_darknet_weights(model, osp.join(weights_from, 'darknet53.conv.74'))
+        cutoff = 75
+        # elif cfg.endswith('yolov3-tiny.cfg'):
+        #     load_darknet_weights(model, osp.join(weights_from, 'yolov3-tiny.conv.15'))
+        #     cutoff = 15
 
         model.cuda().train()
 
@@ -97,7 +97,7 @@ def train(
         for i, (name, p) in enumerate(model.named_parameters()):
             p.requires_grad = False if 'batch_norm' in name else True
 
-    # model_info(model)
+    model_info(model)
     t0 = time.time()
     for epoch in range(epochs):
         epoch += start_epoch
@@ -157,6 +157,7 @@ def train(
                       'model': model.module.state_dict(),
                       'optimizer': optimizer.state_dict()}
 
+        mkdir_if_missing(osp.join(weights_to, 'cfg'))
         copyfile(cfg, weights_to + '/cfg/yolo3.cfg')
         copyfile(data_cfg, weights_to + '/cfg/ccmcpe.json')
 
@@ -168,12 +169,12 @@ def train(
             torch.save(checkpoint, osp.join(weights_to, "weights_epoch_" + str(epoch) + ".pt"))
 
         # Calculate mAP
-        if epoch % opt.test_interval == 0:
-            with torch.no_grad():
-                mAP, R, P = test.test(cfg, data_cfg, weights=latest, batch_size=batch_size, img_size=img_size,
-                                      print_interval=40, nID=dataset.nID)
-                test.test_emb(cfg, data_cfg, weights=latest, batch_size=batch_size, img_size=img_size,
-                              print_interval=40, nID=dataset.nID)
+        # if epoch % opt.test_interval == 0:
+        #     with torch.no_grad():
+        #         mAP, R, P = test.test(cfg, data_cfg, weights=latest, batch_size=batch_size,
+        #                               print_interval=40)
+        #         test.test_emb(cfg, data_cfg, weights=latest, batch_size=batch_size, img_size=img_size,
+        #                       print_interval=40, nID=dataset.nID)
 
         # Call scheduler.step() after opimizer.step() with pytorch > 1.1.0
         scheduler.step()

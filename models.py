@@ -70,6 +70,7 @@ def create_modules(module_defs):
 
         elif module_def['type'] == 'yolo':
             anchor_idxs = [int(x) for x in module_def['mask'].split(',')]
+            print("anchors!!!!, {}".format(anchor_idxs))
             # Extract anchors
             anchors = [float(x) for x in module_def['anchors'].split(',')]
             anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
@@ -77,7 +78,7 @@ def create_modules(module_defs):
             nC = int(module_def['classes'])  # number of classes
             img_size = (int(hyperparams['width']),int(hyperparams['height']))
             # Define detection layer
-            yolo_layer = YOLOLayer(anchors, nC, int(hyperparams['nID']), 
+            yolo_layer = YOLOLayer(anchors, nC, int(hyperparams['nID']),
                                    int(hyperparams['embedding_dim']), img_size, yolo_layer_count)
             modules.add_module('yolo_%d' % i, yolo_layer)
             yolo_layer_count += 1
@@ -291,8 +292,8 @@ def shift_tensor_vertically(t, delta):
 
 def create_grids(self, img_size, nGh, nGw):
     self.stride = img_size[0]/nGw
-    assert self.stride == img_size[1] / nGh, \
-            "{} v.s. {}/{}".format(self.stride, img_size[1], nGh)
+    # assert self.stride == img_size[1] / nGh, \
+    #         "{} v.s. {}/{}".format(self.stride, img_size[1], nGh)
 
     # build xy offsets
     grid_x = torch.arange(nGw).repeat((nGh, 1)).view((1, 1, nGh, nGw)).float()
@@ -308,7 +309,8 @@ def create_grids(self, img_size, nGh, nGw):
 def load_darknet_weights(self, weights, cutoff=-1):
     # Parses and loads the weights stored in 'weights'
     # cutoff: save layers between 0 and cutoff (if cutoff = -1 all are saved)
-    weights_file = weights.split(os.sep)[-1]
+    weights.replace('\\', '/')
+    weights_file = weights.split('/')[-1]
 
     # Try to download weights if not available locally
     if not os.path.isfile(weights):
