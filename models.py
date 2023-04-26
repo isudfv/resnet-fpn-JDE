@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict,OrderedDict
 
+import torch
 import torch.nn as nn
 
 from utils.parse_config import *
@@ -8,6 +9,8 @@ from utils.utils import *
 import time
 import math
 from torchvision import transforms, models
+from torchvision.models import ResNet50_Weights,ResNet152_Weights
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 
 try:
     from utils.syncbn import SyncBN
@@ -15,18 +18,17 @@ try:
 except ImportError:
     batch_norm=nn.BatchNorm2d
 
-def create_resnet_modules(module_defs):
+def create_yolo_layers(anchors, nC, nID, nE, img_size, yolo_layer):
     """
     Constructs module list of layer blocks from models.resnet152
     """
-    hyperparams = module_defs.pop(0)
-    model = models.resnet152(weights='ResNet152_Weights.DEFAULT')
-    features = list(model.children())[:-2]
     module_list = nn.ModuleList()
-    # resnet_module = nn.Sequential(*features)
-    for module in features:
+    yolo_layer_count = 0
+    for k, v in anchors.items():
+        module = YOLOLayer(v, nC, nID, nE, img_size, yolo_layer_count)
         module_list.append(module)
-    return hyperparams, module_list
+        yolo_layer_count += 1
+    return module_list
 
 def create_modules(module_defs):
     """
@@ -306,7 +308,34 @@ class Resnet(nn.Module):
         self.module_defs[0]['nID'] = nID
         self.img_size = [int(self.module_defs[0]['width']), int(self.module_defs[0]['height'])]
         self.emb_dim = int(self.module_defs[0]['embedding_dim'])
-        self.hyperparams, self.module_list = create_resnet_modules(self.module_defs)
+        self.hyperparams = self.module_defs.pop(0)
+        self.backbone = resnet_fpn_backbone('resnet152', weights=ResNet152_Weights.DEFAULT, trainable_layers=5)
+        # self.hyperparams, self.module_list = create_resnet_modules(self.module_defs)
+
+        # self.detect_module = nn.Conv2d(in_channels=256,  # output_filters,
+        #                                out_channels=24,
+        #                                kernel_size=3,
+        #                                stride=1,
+        #                                padding=1)
+        # self.embedding_module = nn.Conv2d(in_channels=256,  # output_filters,
+        #                                out_channels=self.emb_dim,
+        #                                kernel_size=3,
+        #                                stride=1,
+        #                                padding=1)
+        self.detect_and_embedding_module = nn.ModuleList()
+        for i in range(4):
+            modules = nn.Sequential()
+            modules.add_module('yolo_conv_%d' % i, nn.Conv2d(in_channels=256,  out_channels=self.emb_dim + 24, kernel_size=3, stride=1, padding=1))
+            self.detect_and_embedding_module.append(modules)
+
+        self.anchors = {
+            '1': [(128, 384), (180, 540), (256, 640), (512, 640)],
+            '2': [(32, 96), (45, 135), (64, 192), (90, 271)],
+            '3': [(8, 24), (11, 34), (16, 48), (23, 68)],
+        }
+        self.yolo_layer = create_yolo_layers(self.anchors, 1, int(self.hyperparams['nID']),
+                               int(self.hyperparams['embedding_dim']), self.img_size, 1)
+
         self.loss_names = ['loss', 'box', 'conf', 'id', 'nT']
         self.losses = OrderedDict()
         for ln in self.loss_names:
@@ -314,9 +343,6 @@ class Resnet(nn.Module):
         self.test_emb = test_emb
 
         self.classifier = nn.Linear(self.emb_dim, nID) if nID>0 else None
-
-        for module in self.module_list:
-            print(module)
 
 
 
@@ -328,9 +354,28 @@ class Resnet(nn.Module):
         #img_size = x.shape[-1]
         layer_outputs = []
         output = []
+        feature_map  = self.backbone(x)
 
-        for module in self.module_list:
-            print(module)
+        for k, v in feature_map.items():
+            if k == '0' or k == 'pool':
+                continue
+
+            # x = self.detect_module(v)
+            # x = torch.cat([x, self.embedding_module(v)], dim=1)
+            x = self.detect_and_embedding_module[int(k)-1](v)
+            targets = [targets[i][:int(l)] for i,l in enumerate(targets_len)]
+            x, *losses = self.yolo_layer[int(k)-1](x, self.img_size, targets, self.classifier)
+
+            output.append(x)
+            for name, loss in zip(self.loss_names, losses):
+                self.losses[name] += loss
+
+        if is_training:
+            self.losses['nT'] /= 3
+            output = [o.squeeze() for o in output]
+            return sum(output), torch.Tensor(list(self.losses.values())).cuda()
+        elif self.test_emb:
+            return torch.cat(output, 0)
 
         return torch.cat(output, 1)
 

@@ -51,9 +51,9 @@ def train(
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
                                              num_workers=8, pin_memory=True, drop_last=True, collate_fn=collate_fn)
     # Initialize model
-    model = Darknet(cfg, dataset.nID)
-    res_model = Resnet(cfg, dataset.nID)
-    _param = res_model.parameters()
+    # model = Darknet(cfg, dataset.nID)
+    model = Resnet(cfg, dataset.nID)
+    _param = model.parameters()
     for pa in _param:
         print(type(pa), pa.size())
 
@@ -78,8 +78,8 @@ def train(
     else:
         # Initialize model with backbone (optional)
         # if cfg.endswith('yolov3.cfg'):
-        load_darknet_weights(model, osp.join(weights_from, 'darknet53.conv.74'))
-        cutoff = 75
+        # load_darknet_weights(model, osp.join(weights_from, 'darknet53.conv.74'))
+        # cutoff = 75
         # elif cfg.endswith('yolov3-tiny.cfg'):
         #     load_darknet_weights(model, osp.join(weights_from, 'yolov3-tiny.conv.15'))
         #     cutoff = 15

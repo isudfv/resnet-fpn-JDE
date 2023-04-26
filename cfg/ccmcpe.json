@@ -2,9 +2,7 @@
     "root":"C:/Users/isudfv/Desktop/Towards-Realtime-MOT/dataset",
     "train":
     {
-        "mot17":"./data/mot17.train",
-        "mot20":"./data/mot20.train",
-        "citypersons":"./data/citypersons.train"
+        "mot20":"./data/mot20.train"
     },
     "test_emb":
     {
