@@ -192,8 +192,15 @@ class YOLOLayer(nn.Module):
             if len(embedding) > 1:
                 logits = classifier(embedding).contiguous()
                 lid =  self.IDLoss(logits, tids.squeeze())
+                pass
+                # assert torch.isnan(lid).any() == False
+
 
             # Sum loss components
+            # print("====================\n");
+            # print(-self.s_r, torch.exp(-self.s_r)*lbox)
+            # print(torch.exp(-self.s_c)*lconf)
+            # print(-self.s_id, lid, torch.exp(-self.s_id)*lid)
             loss = torch.exp(-self.s_r)*lbox + torch.exp(-self.s_c)*lconf + torch.exp(-self.s_id)*lid + \
                    (self.s_r + self.s_c + self.s_id)
             loss *= 0.5

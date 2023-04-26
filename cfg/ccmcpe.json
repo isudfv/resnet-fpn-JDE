@@ -3,8 +3,7 @@
     "train":
     {
         "mot17":"./data/mot17.train",
-        "mot20":"./data/mot20.train",
-        "citypersons":"./data/citypersons.train"
+        "mot20":"./data/mot20.train"
     },
     "test_emb":
     {

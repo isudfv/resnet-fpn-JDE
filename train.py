@@ -173,8 +173,8 @@ def train(
         #     with torch.no_grad():
         #         mAP, R, P = test.test(cfg, data_cfg, weights=latest, batch_size=batch_size,
         #                               print_interval=40)
-        #         test.test_emb(cfg, data_cfg, weights=latest, batch_size=batch_size, img_size=img_size,
-        #                       print_interval=40, nID=dataset.nID)
+        #         test.test_emb(cfg, data_cfg, weights=latest, batch_size=batch_size,
+        #                       print_interval=40)
 
         # Call scheduler.step() after opimizer.step() with pytorch > 1.1.0
         scheduler.step()
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', action='store_true', help='resume training flag')
     parser.add_argument('--print-interval', type=int, default=40, help='print interval')
     parser.add_argument('--test-interval', type=int, default=9, help='test interval')
-    parser.add_argument('--lr', type=float, default=1e-2, help='init lr')
+    parser.add_argument('--lr', type=float, default=1e-3, help='init lr')
     parser.add_argument('--unfreeze-bn', action='store_true', help='unfreeze bn')
     opt = parser.parse_args()
 
