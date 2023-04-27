@@ -9,7 +9,7 @@ from utils.utils import *
 import time
 import math
 from torchvision import transforms, models
-from torchvision.models import ResNet50_Weights,ResNet152_Weights
+from torchvision.models import ResNet50_Weights,ResNet152_Weights, ResNet18_Weights
 from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 
 try:
@@ -309,7 +309,7 @@ class Resnet(nn.Module):
         self.img_size = [int(self.module_defs[0]['width']), int(self.module_defs[0]['height'])]
         self.emb_dim = int(self.module_defs[0]['embedding_dim'])
         self.hyperparams = self.module_defs.pop(0)
-        self.backbone = resnet_fpn_backbone('resnet152', weights=ResNet152_Weights.DEFAULT, trainable_layers=5)
+        self.backbone = resnet_fpn_backbone('resnet50', weights=None, trainable_layers=5)
         # self.hyperparams, self.module_list = create_resnet_modules(self.module_defs)
 
         # self.detect_module = nn.Conv2d(in_channels=256,  # output_filters,
@@ -322,11 +322,16 @@ class Resnet(nn.Module):
         #                                kernel_size=3,
         #                                stride=1,
         #                                padding=1)
-        self.detect_and_embedding_module = nn.ModuleList()
+        self.detect_module = nn.ModuleList()
         for i in range(4):
             modules = nn.Sequential()
-            modules.add_module('yolo_conv_%d' % i, nn.Conv2d(in_channels=256,  out_channels=self.emb_dim + 24, kernel_size=3, stride=1, padding=1))
-            self.detect_and_embedding_module.append(modules)
+            modules.add_module('yolo_detect_%d' % i, nn.Conv2d(in_channels=256,  out_channels=24, kernel_size=1, stride=1, padding=0))
+            self.detect_module.append(modules)
+        self.embedding_module = nn.ModuleList()
+        for i in range(4):
+            modules = nn.Sequential()
+            modules.add_module('yolo_embedding_%d' % i, nn.Conv2d(in_channels=256,  out_channels=self.emb_dim, kernel_size=3, stride=1, padding=1))
+            self.embedding_module.append(modules)
 
         self.anchors = {
             '1': [(128, 384), (180, 540), (256, 640), (512, 640)],
@@ -359,12 +364,13 @@ class Resnet(nn.Module):
         for k, v in feature_map.items():
             if k == '0' or k == 'pool':
                 continue
+            k = int(k) - 1
 
-            # x = self.detect_module(v)
-            # x = torch.cat([x, self.embedding_module(v)], dim=1)
-            x = self.detect_and_embedding_module[int(k)-1](v)
+            x = self.detect_module[k](v)
+            x = torch.cat([x, self.embedding_module[k](v)], dim=1)
+            # x = self.detect_and_embedding_module[int(k)-1](v)
             targets = [targets[i][:int(l)] for i,l in enumerate(targets_len)]
-            x, *losses = self.yolo_layer[int(k)-1](x, self.img_size, targets, self.classifier)
+            x, *losses = self.yolo_layer[k](x, self.img_size, targets, self.classifier)
 
             output.append(x)
             for name, loss in zip(self.loss_names, losses):

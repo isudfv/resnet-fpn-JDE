@@ -405,7 +405,8 @@ class JointDataset(LoadImagesAndLabels):  # for training
                 start_index = c
         img_path = self.img_files[ds][files_index - start_index]
         label_path = self.label_files[ds][files_index - start_index]
-        
+
+        #print("fuck!!!!!!!   {} {}".format(img_path, label_path))
         imgs, labels, img_path, (h, w) = self.get_data(img_path, label_path) 
         for i, _ in enumerate(labels):
             if labels[i,1] > -1:

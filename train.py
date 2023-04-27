@@ -48,7 +48,7 @@ def train(
     transforms = T.Compose([T.ToTensor()])
     # Get dataloader
     dataset = JointDataset(dataset_root, trainset_paths, img_size, augment=True, transforms=transforms)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=False,
                                              num_workers=8, pin_memory=True, drop_last=True, collate_fn=collate_fn)
     # Initialize model
     # model = Darknet(cfg, dataset.nID)
@@ -87,7 +87,9 @@ def train(
         model.cuda().train()
 
         # Set optimizer
-        optimizer = torch.optim.SGD(filter(lambda x: x.requires_grad, model.parameters()), lr=opt.lr, momentum=.9,
+        # optimizer = torch.optim.SGD(filter(lambda x: x.requires_grad, model.parameters()), lr=opt.lr, momentum=.9,
+        #                             weight_decay=1e-4)
+        optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=.9,
                                     weight_decay=1e-4)
 
     model = torch.nn.DataParallel(model)
@@ -201,9 +203,9 @@ if __name__ == '__main__':
     parser.add_argument('--data-cfg', type=str, default='cfg/ccmcpe.json', help='coco.data file path')
     parser.add_argument('--img-size', type=int, default=[1088, 608], nargs='+', help='pixels')
     parser.add_argument('--resume', action='store_true', help='resume training flag')
-    parser.add_argument('--print-interval', type=int, default=40, help='print interval')
+    parser.add_argument('--print-interval', type=int, default=1, help='print interval')
     parser.add_argument('--test-interval', type=int, default=9, help='test interval')
-    parser.add_argument('--lr', type=float, default=1e-2, help='init lr')
+    parser.add_argument('--lr', type=float, default=1e-3, help='init lr')
     parser.add_argument('--unfreeze-bn', action='store_true', help='unfreeze bn')
     opt = parser.parse_args()
 
