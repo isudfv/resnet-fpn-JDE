@@ -1,7 +1,7 @@
 import argparse
 import json
 import time
-from time import gmtime, strftime
+from time import gmtime, strftime, localtime
 import test
 from models import *
 from shutil import copyfile
@@ -27,7 +27,7 @@ def train(
 ):
     # The function starts
 
-    timme = strftime("%Y-%d-%m %H:%M:%S", gmtime())
+    timme = strftime("%Y-%d-%m %H:%M:%S", localtime())
     timme = timme[5:-3].replace('-', '_')
     timme = timme.replace(' ', '_')
     timme = timme.replace(':', '_')
@@ -100,6 +100,8 @@ def train(
     model_info(model)
     t0 = time.time()
     for epoch in range(epochs):
+        loss_to_file = []
+
         epoch += start_epoch
         logger.info(('%8s%12s' + '%10s' * 6) % (
             'Epoch', 'Batch', 'box', 'conf', 'id', 'total', 'nTargets', 'time'))
@@ -151,6 +153,7 @@ def train(
             t0 = time.time()
             if i % opt.print_interval == 0:
                 logger.info(s)
+            loss_to_file.append(s)
 
         # Save latest checkpoint
         checkpoint = {'epoch': epoch,
@@ -167,6 +170,10 @@ def train(
             # making the checkpoint lite
             checkpoint["optimizer"] = []
             torch.save(checkpoint, osp.join(weights_to, "weights_epoch_" + str(epoch) + ".pt"))
+
+        with open(osp.join(weights_to, 'losses.txt'), 'a') as f:
+            for line in loss_to_file:
+                f.write(f"{line}\n")
 
         # Calculate mAP
         # if epoch % opt.test_interval == 0:
