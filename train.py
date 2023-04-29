@@ -1,7 +1,7 @@
 import argparse
 import json
 import time
-from time import gmtime, strftime
+from time import gmtime, strftime, localtime
 import test
 from models import *
 from shutil import copyfile
@@ -27,7 +27,7 @@ def train(
 ):
     # The function starts
 
-    timme = strftime("%Y-%d-%m %H:%M:%S", gmtime())
+    timme = strftime("%Y-%d-%m %H:%M:%S", localtime())
     timme = timme[5:-3].replace('-', '_')
     timme = timme.replace(' ', '_')
     timme = timme.replace(':', '_')
@@ -106,6 +106,8 @@ def train(
     model_info(model)
     t0 = time.time()
     for epoch in range(epochs):
+        loss_to_file = []
+
         epoch += start_epoch
         logger.info(('%8s%12s' + '%10s' * 6) % (
             'Epoch', 'Batch', 'box', 'conf', 'id', 'total', 'nTargets', 'time'))
@@ -124,8 +126,9 @@ def train(
                 continue
 
             # SGD burn-in
-            burnin = min(1000, len(dataloader))
-            if (epoch == 0) & (i <= burnin):
+            burnin = min(3000, len(dataloader))
+            # if (epoch == 0) & (i <= burnin):
+            if (i <= burnin):
                 lr = opt.lr * (i / burnin) ** 4
                 for g in optimizer.param_groups:
                     g['lr'] = lr
@@ -157,6 +160,7 @@ def train(
             t0 = time.time()
             if i % opt.print_interval == 0:
                 logger.info(s)
+            loss_to_file.append(s)
 
         # Save latest checkpoint
         checkpoint = {'epoch': epoch,
@@ -173,6 +177,10 @@ def train(
             # making the checkpoint lite
             checkpoint["optimizer"] = []
             torch.save(checkpoint, osp.join(weights_to, "weights_epoch_" + str(epoch) + ".pt"))
+
+        with open(osp.join(weights_to, 'losses.txt'), 'a') as f:
+            for line in loss_to_file:
+                f.write(f"{line}\n")
 
         # Calculate mAP
         # if epoch % opt.test_interval == 0:
@@ -203,9 +211,9 @@ if __name__ == '__main__':
     parser.add_argument('--data-cfg', type=str, default='cfg/ccmcpe.json', help='coco.data file path')
     parser.add_argument('--img-size', type=int, default=[1088, 608], nargs='+', help='pixels')
     parser.add_argument('--resume', action='store_true', help='resume training flag')
-    parser.add_argument('--print-interval', type=int, default=1, help='print interval')
+    parser.add_argument('--print-interval', type=int, default=40, help='print interval')
     parser.add_argument('--test-interval', type=int, default=9, help='test interval')
-    parser.add_argument('--lr', type=float, default=1e-3, help='init lr')
+    parser.add_argument('--lr', type=float, default=1e-4, help='init lr')
     parser.add_argument('--unfreeze-bn', action='store_true', help='unfreeze bn')
     opt = parser.parse_args()
 

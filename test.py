@@ -34,7 +34,8 @@ def test(
     img_size = [int(cfg_dict[0]['width']), int(cfg_dict[0]['height'])]
 
     # Initialize model
-    model = Darknet(cfg_dict, test_emb=False)
+    # model = Darknet(cfg_dict, test_emb=False)
+    model = Resnet(cfg_dict, test_emb=False)
 
     # Load weights
     if weights.endswith('.pt'):  # pytorch format
@@ -73,6 +74,7 @@ def test(
                 # If there are labels but no detections mark as zero AP
                 if labels.size(0) != 0:
                     mAPs.append(0), mR.append(0), mP.append(0)
+                    print("fuckfuck")
                 continue
 
             # Get detections sorted by decreasing confidence scores
@@ -224,7 +226,7 @@ def test_emb(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
-    parser.add_argument('--batch-size', type=int, default=40, help='size of each image batch')
+    parser.add_argument('--batch-size', type=int, default=4, help='size of each image batch')
     parser.add_argument('--cfg', type=str, default='cfg/yolov3.cfg', help='cfg file path')
     parser.add_argument('--data-cfg', type=str, default='cfg/ccmcpe.json', help='data config')
     parser.add_argument('--weights', type=str, default='weights/latest.pt', help='path to weights file')

@@ -210,9 +210,10 @@ class YOLOLayer(nn.Module):
                 lid =  self.IDLoss(logits, tids.squeeze())
 
             # Sum loss components
-            loss = torch.exp(-self.s_r)*lbox + torch.exp(-self.s_c)*lconf + torch.exp(-self.s_id)*lid + \
-                   (self.s_r + self.s_c + self.s_id)
-            loss *= 0.5
+            # loss = torch.exp(-self.s_r)*lbox + torch.exp(-self.s_c)*lconf + torch.exp(-self.s_id)*lid + \
+            #        (self.s_r + self.s_c + self.s_id)
+            # loss *= 0.5
+            loss = 64.0*lbox + 64.0*lconf + 0.1*lid
 
             return loss, loss.item(), lbox.item(), lconf.item(), lid.item(), nT
 
@@ -309,7 +310,7 @@ class Resnet(nn.Module):
         self.img_size = [int(self.module_defs[0]['width']), int(self.module_defs[0]['height'])]
         self.emb_dim = int(self.module_defs[0]['embedding_dim'])
         self.hyperparams = self.module_defs.pop(0)
-        self.backbone = resnet_fpn_backbone('resnet50', weights=None, trainable_layers=5)
+        self.backbone = resnet_fpn_backbone('resnet50', weights=ResNet50_Weights.DEFAULT, trainable_layers=3)
         # self.hyperparams, self.module_list = create_resnet_modules(self.module_defs)
 
         # self.detect_module = nn.Conv2d(in_channels=256,  # output_filters,
@@ -368,13 +369,20 @@ class Resnet(nn.Module):
 
             x = self.detect_module[k](v)
             x = torch.cat([x, self.embedding_module[k](v)], dim=1)
-            # x = self.detect_and_embedding_module[int(k)-1](v)
-            targets = [targets[i][:int(l)] for i,l in enumerate(targets_len)]
-            x, *losses = self.yolo_layer[k](x, self.img_size, targets, self.classifier)
+            if is_training:
+                # x = self.detect_and_embedding_module[int(k)-1](v)
+                targets = [targets[i][:int(l)] for i,l in enumerate(targets_len)]
+                x, *losses = self.yolo_layer[k](x, self.img_size, targets, self.classifier)
 
+                for name, loss in zip(self.loss_names, losses):
+                    self.losses[name] += loss
+            elif self.test_emb:
+                if targets is not None:
+                    targets = [targets[i][:int(l)] for i,l in enumerate(targets_len)]
+                x = self.yolo_layer[k](x, self.img_size, targets, self.classifier, self.test_emb)
+            else:  # get detections
+                x = self.yolo_layer[k](x, self.img_size)
             output.append(x)
-            for name, loss in zip(self.loss_names, losses):
-                self.losses[name] += loss
 
         if is_training:
             self.losses['nT'] /= 3

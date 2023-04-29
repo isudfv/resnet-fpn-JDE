@@ -358,7 +358,9 @@ class JointDataset(LoadImagesAndLabels):  # for training
             self.label_files[ds] = [x.replace('images', 'labels_with_ids').replace('.png', '.txt').replace('.jpg', '.txt')
                                 for x in self.img_files[ds]]
 
+
         for ds, label_paths in self.label_files.items():
+            print("LAEBLS: {} {}".format(ds, len(label_paths)/4))
             max_index = -1
             for lp in label_paths:
                 lb = np.loadtxt(lp)
