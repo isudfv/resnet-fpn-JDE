@@ -4,10 +4,7 @@
     {
         "mot20":"./data/mot20.train",
         "mot17":"./data/mot17.train",
-        "mot15":"./data/mot15.train",
-        "cuhksysu":"./data/cuhksysu.train",
-        "prw":"./data/prw.train",
-        "eth":"./data/eth.train"
+        "mot15":"./data/mot15.train"
     },
     "test_emb":
     {

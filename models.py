@@ -310,7 +310,7 @@ class Resnet(nn.Module):
         self.img_size = [int(self.module_defs[0]['width']), int(self.module_defs[0]['height'])]
         self.emb_dim = int(self.module_defs[0]['embedding_dim'])
         self.hyperparams = self.module_defs.pop(0)
-        self.backbone = resnet_fpn_backbone('resnet50', weights=ResNet50_Weights.DEFAULT, trainable_layers=3)
+        self.backbone = resnet_fpn_backbone('resnet152', weights=ResNet152_Weights.DEFAULT, trainable_layers=5)
         # self.hyperparams, self.module_list = create_resnet_modules(self.module_defs)
 
         # self.detect_module = nn.Conv2d(in_channels=256,  # output_filters,

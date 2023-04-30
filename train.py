@@ -126,9 +126,9 @@ def train(
                 continue
 
             # SGD burn-in
-            burnin = min(3000, len(dataloader))
-            # if (epoch == 0) & (i <= burnin):
-            if (i <= burnin):
+            burnin = min(1000, len(dataloader))
+            if (epoch == 0) & (i <= burnin):
+            # if (i <= burnin):
                 lr = opt.lr * (i / burnin) ** 4
                 for g in optimizer.param_groups:
                     g['lr'] = lr
@@ -141,6 +141,7 @@ def train(
 
             # accumulate gradient for x batches before optimizing
             if ((i + 1) % accumulated_batches == 0) or (i == len(dataloader) - 1):
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
                 optimizer.zero_grad()
 
@@ -191,6 +192,7 @@ def train(
         #                       print_interval=40, nID=dataset.nID)
 
         # Call scheduler.step() after opimizer.step() with pytorch > 1.1.0
+
         scheduler.step()
 
 
@@ -213,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', action='store_true', help='resume training flag')
     parser.add_argument('--print-interval', type=int, default=40, help='print interval')
     parser.add_argument('--test-interval', type=int, default=9, help='test interval')
-    parser.add_argument('--lr', type=float, default=1e-4, help='init lr')
+    parser.add_argument('--lr', type=float, default=1e-2, help='init lr')
     parser.add_argument('--unfreeze-bn', action='store_true', help='unfreeze bn')
     opt = parser.parse_args()
 
